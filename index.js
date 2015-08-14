@@ -1,7 +1,7 @@
 var io = require('socket.io-client');
 var fit = require('canvas-fit');
 var loop = require('raf-loop');
-var socket = io('http://10.10.40.87:4002');
+var socket = io();
 var xtend = require('xtend');
 var keyDown = require('key-pressed');
 

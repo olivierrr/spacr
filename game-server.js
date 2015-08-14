@@ -1,9 +1,14 @@
-var app = require('http').createServer(handle);
+var ecstatic = require('ecstatic');
+var app = require('http').createServer(ecstatic({ root: __dirname }));
 var os = require('os');
 var randomName = require('node-random-name');
 var randomColor = require('./random-color');
 
-const PORT = 4002;
+var http = require('http');
+var ecstatic = require('ecstatic');
+
+const PORT = +process.argv[2] || 4200;
+console.log(PORT);
 app.listen(PORT, function(){
   console.log("Server listening on: http://localhost:%s", PORT);
 });
@@ -52,10 +57,6 @@ function tick() {
     worldState.focus = socket.me.id;
     socket.emit('step', worldState);
   })
-}
-
-function handle(req, res) {
-  //
 }
 
 var interfaces = os.networkInterfaces();
