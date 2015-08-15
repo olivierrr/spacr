@@ -10,6 +10,8 @@ module.exports.ACTIONS = {
   TURN_LEFT_STOP: 'TURN_LEFT_STOP',
   THRUST_FORWARD_BEGIN: 'THRUST_FORWARD_BEGIN',
   THRUST_FORWARD_STOP: 'THRUST_FORWARD_STOP',
+  THRUST_BACKWARD_BEGIN: 'THRUST_BACKWARD_BEGIN',
+  THRUST_BACKWARD_STOP: 'THRUST_BACKWARD_STOP',
   SHOOT_MAIN_BEGIN: 'SHOOT_MAIN_BEGIN',
   SHOOT_MAIN_STOP: 'SHOOT_MAIN_STOP',
   GRAPPLE_GUN_RELEASE: 'GRAPPLE_GUN_RELEASE',
@@ -39,6 +41,8 @@ module.exports.KEY_BINDINGS = {
   TURN_LEFT_STOP: ['!A'],
   THRUST_FORWARD_BEGIN: ['W'],
   THRUST_FORWARD_STOP: ['!W'],
+  THRUST_BACKWARD_BEGIN: ['S'],
+  THRUST_BACKWARD_STOP: ['!S'],
   SHOOT_MAIN_BEGIN: ['<space>'],
   SHOOT_MAIN_STOP: ['!<space>'],
   GRAPPLE_GUN_RELEASE: ['E'],
@@ -55,12 +59,12 @@ module.exports.SERVER_SETTINGS = {
 };
 
 module.exports.GAME_SETTINGS = {
-  BASE_PLAYER_THRUST_ACCELERATION: 50,
-  BASE_PLAYER_TURN_ACCELERATION: 10,
+  BASE_PLAYER_THRUST_ACCELERATION: 0.3,
+  BASE_PLAYER_TURN_ACCELERATION: 7,
   BASE_DEFAULT_TURN_ACCELERATION: 0,
   BASE_PLAYER_BULLET_DAMAGE: 10,
-  BASE_PLAYER_BULLET_LIFETIME: 1,
-  BASE_PLAYER_BULLET_SPEED: 50
+  BASE_PLAYER_BULLET_LIFETIME: 4,
+  BASE_PLAYER_BULLET_SPEED: 30
 };
 
 },{}],2:[function(require,module,exports){
@@ -32466,7 +32470,7 @@ function Renderer() {
 
   var self = this;
   mousewheel(function (dx, dy) {
-    self.zoom = clamp(self.zoom + dy, 10, 1000);
+    self.zoom = ~ ~clamp(self.zoom + dy, 10, 1000);
   });
 
   // scoreboard
@@ -32497,7 +32501,7 @@ function Renderer() {
   var graphics = new PIXI.Graphics();
   var bw = 500;
   var bh = 500;
-  var cellSize = 10;
+  var cellSize = 50;
   graphics.lineStyle(0.1, 0x457000, 1.0);
   for (var x = 0; x <= bw; x += cellSize) {
     graphics.moveTo(x, 0);
@@ -34819,7 +34823,7 @@ function step(dt) {
   if (!frameA || !frameB) {
     console.warn('skipping frame');
     return;
-  };
+  }
 
   var lerpScale = Math.abs(1 / frameB.delta * (frameA.timestamp - targetTime));
   var worldState = lerpObject(frameA, frameB, lerpScale);

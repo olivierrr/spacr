@@ -62,7 +62,7 @@ function step(dt) {
   if (!frameA || !frameB) {
     console.warn('skipping frame');
     return;
-  };
+  }
 
   var lerpScale = Math.abs((1/frameB.delta) * (frameA.timestamp - targetTime));
   var worldState = lerpObject(frameA, frameB, lerpScale);

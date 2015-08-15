@@ -1,5 +1,4 @@
 var p2 = require('p2');
-var EventEmitter = require('events');
 var uuid = require('uuid').v4;
 var clamp = require('clamp');
 var constants = require('./constants');
@@ -8,18 +7,18 @@ var GAME_SETTINGS = constants.GAME_SETTINGS;
 var ENTITY_TYPES = constants.ENTITY_TYPES;
 
 var Bullet = require('./bullet');
+var Player = require('./player');
+var Planet = require('./planet');
 
-var BULLET = 'BULLET';
-var PLAYER = 'PLAYER';
-var PLANET = 'PLANET';
-var SPRING = 'SPRING';
+var BULLET = ENTITY_TYPES.BULLET;
+var PLAYER = ENTITY_TYPES.PLAYER;
+var PLANET = ENTITY_TYPES.PLANET;
+var SPRING = ENTITY_TYPES.SPRING;
 
 function Game(width, height) {
   this.width = width;
   this.height = height;
-
   this.es = [];
-  this.events = new EventEmitter.EventEmitter();
   this.world = new p2.World({
     gravity: [0, 0]
   });
@@ -60,19 +59,19 @@ var proto = Game.prototype;
 
 proto.setWorldBounds = function() {
   var self = this;
-  var plane = new p2.Body({
+  var planeTop = new p2.Body({
     mass: 0,
     position : [0,0]
   });
-  plane.addShape(new p2.Plane());
-  self.world.addBody(plane);
-  var plane = new p2.Body({
+  planeTop.addShape(new p2.Plane());
+  self.world.addBody(planeTop);
+  var planeBottom = new p2.Body({
     angle: -Math.PI,
     mass: 0,
     position : [0,self.height]
   });
-  plane.addShape(new p2.Plane());
-  self.world.addBody(plane);
+  planeBottom.addShape(new p2.Plane());
+  self.world.addBody(planeBottom);
   var planeLeft = new p2.Body({
     mass: 0,
     angle: -Math.PI/2,
@@ -92,20 +91,10 @@ proto.setWorldBounds = function() {
 proto.serialize = function() {
   var entities = {};
   this.es.forEach(function(e) {
-    entities[e.id] = {
-      id: e.id,
-      type: e.type,
-      x: e.body.position[0],
-      y: e.body.position[1],
-      radius: e.shape.radius,
-      angle: e.body.angle,
-      width: e.shape.width,
-      height: e.shape.height,
-      points: e.points,
-      name: e.name,
-      color: e.color,
-      health: e.health
-    };
+    if(typeof e.serialize === 'function') {
+      entities[e.id] = e.serialize();
+      return;
+    }
   });
 
   this.world.springs.forEach(function(e) {
@@ -127,9 +116,11 @@ proto.serialize = function() {
 };
 
 proto.addSpring = function(player, planet) {
-  if(player.spring) return;
+  if(player.spring) {
+    return;
+  }
   var spring = new p2.LinearSpring(player.body, planet.body, {
-    stiffness: 2,
+    stiffness: 0.01,
     restLength: 0,
     damping : 0
   });
@@ -139,68 +130,17 @@ proto.addSpring = function(player, planet) {
 };
 
 proto.addPlayer = function(x, y, name, color) {
-  var self = this;
-  var shape = new p2.Box({
-    width: 5,
-    height: 1
-  });
-  var body = new p2.Body({
-    mass:1.0,
-    position:[x, y],
-    angularVelocity:1
-  });
-  turnOffDamping(body);
-  body.addShape(shape);
-  self.world.addBody(body);
-  var player = {
-    id: uuid(),
-    body: body,
-    shape: shape,
-    type: PLAYER,
-    isAlive: true,
-    spring: false,
-    health: 100,
-    actions: {},
-    lastShotBy: 0,
-    points: 0,
-    color: color,
-    name: name
-  };
-  body.__game = player;
-  self.es.push(player);
+  var player = new Player(this, x, y, name, color);
   return player;
 };
 
 proto.addBullet = function(aPlayer) {
-  var bullet = new Bullet(this.world, aPlayer);
-  this.es.push(bullet);
+  var bullet = new Bullet(this, aPlayer);
   return bullet;
 };
 
 proto.addPlanet = function(x, y) {
-  var self = this;
-  var shape = new p2.Circle({
-    radius: Math.random() * 10 + 5
-  });
-  var body = new p2.Body({
-    mass: 50,
-    position: [x, y]
-  });
-
-  turnOffDamping(body);
-  body.addShape(shape);
-  self.world.addBody(body);
-
-  var planet = {
-    shape: shape,
-    body: body,
-    type: PLANET,
-    id: uuid()
-  };
-
-  body.__game = planet;
-  self.events.emit('addingE', planet);
-  self.es.push(planet);
+  var planet = new Planet(this, x, y);
   return planet;
 };
 
@@ -218,6 +158,10 @@ proto.step = function(dt) {
 
     if(down[ACTIONS.THRUST_FORWARD_BEGIN]) {
       e.body.applyForceLocal([0, GAME_SETTINGS.BASE_PLAYER_THRUST_ACCELERATION]);
+    }
+
+    if(down[ACTIONS.THRUST_BACKWARD_BEGIN]) {
+      e.body.applyForceLocal([0, -GAME_SETTINGS.BASE_PLAYER_THRUST_ACCELERATION]);
     }
 
     if(down[ACTIONS.TURN_RIGHT_BEGIN]) {
@@ -256,38 +200,23 @@ proto.step = function(dt) {
       }
       self.addSpring(e, closestPlanetSoFar);
     }
+
+    if(e.type === PLAYER) {
+      var vx = e.body.velocity[0];
+      var vy = e.body.velocity[1];
+      var maxSpeed = GAME_SETTINGS.PLAYER_MAX_SPEED;
+      if (Math.pow(vx, 2) + Math.pow(vy, 2) > Math.pow(maxSpeed, 2)) {
+        var a = Math.atan2(vy, vx);
+        vx = Math.cos(a) * maxSpeed;
+        vy = Math.sin(a) * maxSpeed;
+        e.body.velocity[0] = vx;
+        e.body.velocity[1] = vy;
+      }
+    }
   });
 
-  // gravity
-  //self.es.forEach(function(e1) {
-  //  //if(e1.type === BULLET) return;
-  //  self.es.forEach(function(e2) {
-  //    if(e2.type === BULLET) return;
-  //    if(e1 == e2) return;
-  //
-  //    // fix to not be step dependent...
-  //    var dx, dy, a, d;
-  //    var treshold = 100;
-  //    dx = e2.body.position[0] - e1.body.position[0];
-  //    dy = e2.body.position[1] - e1.body.position[1];
-  //    d = Math.sqrt(dx*dx + dy*dy);
-  //
-  //    //if(d > treshold) return;
-  //
-  //    a = Math.atan2(dx, dy) * (180 / Math.PI);
-  //
-  //    var accel = (e2.body.mass / Math.pow(e1.body.mass, 2)) * (1 - d/100);
-  //    accel = clamp(accel, 0, 5);
-  //    var fx = Math.sin(a * (Math.PI / 180)) * accel * 0.1;
-  //    var fy = Math.cos(a * (Math.PI / 180)) * accel * 0.1;
-  //
-  //    e1.body.force[0] += fx;
-  //    e1.body.force[1] += fy;
-  //  });
-  //});
-
-
-  self.es.forEach(function(e) {
+  self.es.forEach(function(e, i) {
+    // player dies
     if(e.type === PLAYER && e.health <= 0) {
 
       // give a 'point' to the player that last shot this player
@@ -308,17 +237,7 @@ proto.step = function(dt) {
         e.spring = false;
       }
     }
-  });
 
-  self.es.forEach(function(e, i) {
-
-    //if(e.type === PLAYER) {
-    //  var maxvelocity = 50;
-    //  e.body.velocity[0] = clamp(e.body.velocity[0], -maxvelocity, maxvelocity);
-    //  e.body.velocity[1] = clamp(e.body.velocity[1], -maxvelocity, maxvelocity);
-    //}
-
-    // bullet removal
     if(e.type === BULLET && e.dieTime <= self.world.time) {
       self.es.splice(i, 1);
       self.world.removeBody(e.body);

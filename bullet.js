@@ -4,39 +4,57 @@ var uuid = require('uuid').v4;
 var GAME_SETTINGS = constants.GAME_SETTINGS;
 var ENTITY_TYPES = constants.ENTITY_TYPES;
 
-function Bullet(world, aPlayer) {
-  this.shape = new p2.Box({
+function Bullet(game, aPlayer) {
+  var shape, body, type, id, dieTime, ownerId, color, magnitude, angle;
+
+  shape = new p2.Box({
     width: 0.3,
     height: 0.3
   });
-
-  this.body = new p2.Body({
+  body = new p2.Body({
     mass: 0.01,
     position: aPlayer.body.position
   });
+  body.addShape(shape);
 
-  var magnitude = GAME_SETTINGS.BASE_PLAYER_BULLET_SPEED;
-  var angle = aPlayer.body.angle + Math.PI / 2;
+  magnitude = GAME_SETTINGS.BASE_PLAYER_BULLET_SPEED;
+  angle = aPlayer.body.angle + Math.PI / 2;
+  body.velocity[0] += magnitude * Math.cos(angle) + aPlayer.body.velocity[0];
+  body.velocity[1] += magnitude * Math.sin(angle) + aPlayer.body.velocity[1];
+  body.damping = body.angularDamping = 0;
 
-  // give bullet initial velocity
-  this.body.velocity[0] += magnitude * Math.cos(angle) + aPlayer.body.velocity[0];
-  this.body.velocity[1] += magnitude * Math.sin(angle) + aPlayer.body.velocity[1];
+  type = ENTITY_TYPES.BULLET;
+  id = uuid();
+  dieTime = game.world.time + GAME_SETTINGS.BASE_PLAYER_BULLET_LIFETIME;
+  ownerId = aPlayer.id;
+  color = aPlayer.color;
+  body.__game = this;
 
-  //var m = 0.1;
-  //aPlayer.body.velocity[0] -= body.velocity[0] * m;
-  //aPlayer.body.velocity[1] -= body.velocity[1] * m;
+  this.body = body;
+  this.shape = shape;
+  this.type = type;
+  this.id = id;
+  this.dieTime = dieTime;
+  this.ownerId = ownerId;
+  this.color = color;
 
-  this.body.damping = this.body.angularDamping = 0;
-  this.body.addShape(this.shape);
-  world.addBody(this.body);
-
-  this.type = ENTITY_TYPES.BULLET;
-  this.id = uuid();
-  this.dieTime = world.time + GAME_SETTINGS.BASE_PLAYER_BULLET_LIFETIME;
-  this.ownerId = aPlayer.id;
-  this.color = aPlayer.color;
-  this.body.__game = this;
-};
+  game.world.addBody(body);
+  game.es.push(this);
+}
 
 var proto = Bullet.prototype;
+
+proto.serialize = function() {
+  return {
+    id: this.id,
+    type: this.type,
+    x: this.body.position[0],
+    y: this.body.position[1],
+    angle: this.body.angle,
+    width: this.shape.width,
+    height: this.shape.height,
+    color: this.color
+  }
+};
+
 module.exports = Bullet;

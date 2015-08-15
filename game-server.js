@@ -7,7 +7,7 @@ var randomColor = require('./random-color');
 var http = require('http');
 var ecstatic = require('ecstatic');
 
-const PORT = +process.argv[2] || 4200;
+var PORT = +process.argv[2] || 4200;
 console.log(PORT);
 app.listen(PORT, function(){
   console.log("Server listening on: http://localhost:%s", PORT);
@@ -16,7 +16,7 @@ app.listen(PORT, function(){
 var io = require('socket.io')(app);
 
 var constants = require('./constants');
-const SERVER_SETTINGS = constants.SERVER_SETTINGS;
+var SERVER_SETTINGS = constants.SERVER_SETTINGS;
 var Game = require('./game');
 var game = new Game(500, 500);
 
@@ -47,7 +47,7 @@ io.on('connection', function(socket) {
 });
 
 function tick() {
-  game.step();
+  game.step((Date.now() - lastFrameTime) / 1000);
   var worldState = game.serialize();
   worldState.timestamp = Date.now();
   worldState.delta = Date.now() - lastFrameTime;
@@ -58,15 +58,3 @@ function tick() {
     socket.emit('step', worldState);
   })
 }
-
-var interfaces = os.networkInterfaces();
-var addresses = [];
-for (var k in interfaces) {
-  for (var k2 in interfaces[k]) {
-    var address = interfaces[k][k2];
-    if (address.family === 'IPv4' && !address.internal) {
-      addresses.push(address.address);
-    }
-  }
-}
-console.log('local network ip is: http://%s:%s', addresses[0], PORT);

@@ -12,7 +12,7 @@ function Renderer() {
 
   var self = this;
   mousewheel(function (dx, dy) {
-    self.zoom = clamp(self.zoom + dy, 10, 1000);
+    self.zoom = ~~clamp(self.zoom + dy, 10, 1000);
   });
 
   // scoreboard
@@ -43,7 +43,7 @@ function Renderer() {
   var graphics = new PIXI.Graphics();
   var bw = 500;
   var bh = 500;
-  var cellSize = 10;
+  var cellSize = 50;
   graphics.lineStyle(0.1, 0x457000, 1.0);
   for (var x = 0; x <= bw; x += cellSize) {
     graphics.moveTo(x, 0);
