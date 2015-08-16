@@ -1,7 +1,7 @@
 var p2 = require('p2');
 var uuid = require('uuid').v4;
 var clamp = require('clamp');
-var constants = require('./constants');
+var constants = require('./../lib/constants');
 var ACTIONS = constants.ACTIONS;
 var GAME_SETTINGS = constants.GAME_SETTINGS;
 var ENTITY_TYPES = constants.ENTITY_TYPES;
@@ -9,6 +9,7 @@ var ENTITY_TYPES = constants.ENTITY_TYPES;
 var Bullet = require('./bullet');
 var Player = require('./player');
 var Planet = require('./planet');
+var Spring = require('./spring');
 
 var BULLET = ENTITY_TYPES.BULLET;
 var PLAYER = ENTITY_TYPES.PLAYER;
@@ -27,7 +28,6 @@ function Game(width, height) {
     this.addPlanet(Math.random() * this.width, Math.random() * this.height);
   }
 
-  var self = this;
   this.world.on('impact', function(evt) {
     var bodyA = evt.bodyA;
     var bodyB = evt.bodyB;
@@ -40,14 +40,9 @@ function Game(width, height) {
 
       if(otherBody.__game.type === PLAYER && otherBody.__game.id !== bulletBody.__game.ownerId){
         otherBody.__game.health -= GAME_SETTINGS.BASE_PLAYER_BULLET_DAMAGE;
+        otherBody.__game.health = clamp(otherBody.__game.health, 0, 100);
         otherBody.__game.lastShotBy = bulletBody.__game.ownerId;
-        for(var i = 0; i < self.es.length; i++) {
-          if(self.es[i].id === bulletBody.__game.id) {
-            self.es.splice(i, 1);
-            self.world.removeBody(bulletBody);
-            break;
-          }
-        }
+        bulletBody.__game.removeFromGame();
       }
     }
   });
@@ -93,40 +88,19 @@ proto.serialize = function() {
   this.es.forEach(function(e) {
     if(typeof e.serialize === 'function') {
       entities[e.id] = e.serialize();
-      return;
     }
   });
 
-  this.world.springs.forEach(function(e) {
-    entities[e.id] = {
-      id: e.id,
-      type: SPRING,
-      ax: e.bodyA.position[0],
-      ay: e.bodyA.position[1],
-      bx: e.bodyB.position[0],
-      by: e.bodyB.position[1]
-    };
-  });
-  var self = this;
   return {
     entities: entities,
-    width: self.width,
-    height: self.height
+    width: this.width,
+    height: this.height
   };
 };
 
 proto.addSpring = function(player, planet) {
-  if(player.spring) {
-    return;
-  }
-  var spring = new p2.LinearSpring(player.body, planet.body, {
-    stiffness: 0.01,
-    restLength: 0,
-    damping : 0
-  });
-  spring.id = uuid();
-  player.spring = spring;
-  this.world.addSpring(spring);
+  var spring = new Spring(this, player, planet);
+  return spring;
 };
 
 proto.addPlayer = function(x, y, name, color) {
@@ -148,8 +122,9 @@ proto.step = function(dt) {
   var self = this;
   var dt = dt || (1/60);
 
-  // process entity actions
   self.es.forEach(function(e) {
+    if(e.type !== PLAYER) return;
+
     var down = e.actions || {};
 
     if(down[ACTIONS.SHOOT_MAIN_BEGIN]) {
@@ -165,11 +140,11 @@ proto.step = function(dt) {
     }
 
     if(down[ACTIONS.TURN_RIGHT_BEGIN]) {
-      e.body.angularVelocity  = -GAME_SETTINGS.BASE_PLAYER_TURN_ACCELERATION
+      e.body.angularVelocity  = -GAME_SETTINGS.BASE_PLAYER_TURN_ACCELERATION;
     }
 
     if(down[ACTIONS.TURN_LEFT_BEGIN]) {
-      e.body.angularVelocity = GAME_SETTINGS.BASE_PLAYER_TURN_ACCELERATION
+      e.body.angularVelocity = GAME_SETTINGS.BASE_PLAYER_TURN_ACCELERATION;
     }
 
     if(!down[ACTIONS.TURN_RIGHT_BEGIN] && !down[ACTIONS.TURN_LEFT_BEGIN]) {
@@ -177,8 +152,7 @@ proto.step = function(dt) {
     }
 
     if(down[ACTIONS.GRAPPLE_GUN_RELEASE] && e.spring) {
-      self.world.removeSpring(e.spring);
-      e.spring = false;
+      e.removeSpring();
     }
 
     if(down[ACTIONS.GRAPPLE_GUN_START] && !e.spring) {
@@ -201,17 +175,15 @@ proto.step = function(dt) {
       self.addSpring(e, closestPlanetSoFar);
     }
 
-    if(e.type === PLAYER) {
-      var vx = e.body.velocity[0];
-      var vy = e.body.velocity[1];
-      var maxSpeed = GAME_SETTINGS.PLAYER_MAX_SPEED;
-      if (Math.pow(vx, 2) + Math.pow(vy, 2) > Math.pow(maxSpeed, 2)) {
-        var a = Math.atan2(vy, vx);
-        vx = Math.cos(a) * maxSpeed;
-        vy = Math.sin(a) * maxSpeed;
-        e.body.velocity[0] = vx;
-        e.body.velocity[1] = vy;
-      }
+    var vx = e.body.velocity[0];
+    var vy = e.body.velocity[1];
+    var maxSpeed = GAME_SETTINGS.PLAYER_MAX_SPEED;
+    if (Math.pow(vx, 2) + Math.pow(vy, 2) > Math.pow(maxSpeed, 2)) {
+      var a = Math.atan2(vy, vx);
+      vx = Math.cos(a) * maxSpeed;
+      vy = Math.sin(a) * maxSpeed;
+      e.body.velocity[0] = vx;
+      e.body.velocity[1] = vy;
     }
   });
 
@@ -231,16 +203,11 @@ proto.step = function(dt) {
       // clean up and new assign spawn properties
       e.body.position = [Math.random() * self.width, Math.random() * self.height];
       e.health = 100;
-      console.log('respawn!');
-      if(e.spring) {
-        self.world.removeSpring(e.spring);
-        e.spring = false;
-      }
+      e.removeSpring();
     }
 
     if(e.type === BULLET && e.dieTime <= self.world.time) {
-      self.es.splice(i, 1);
-      self.world.removeBody(e.body);
+      e.removeFromGame();
     }
   });
 

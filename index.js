@@ -5,11 +5,11 @@ var socket = io();
 var xtend = require('xtend');
 var keyDown = require('key-pressed');
 
-const {ACTIONS, EVENTS, KEY_BINDINGS} = require('./constants');
-var Minimap = require('./minimap');
-var Renderer = require('./renderer');
-var Statusbar = require('./statusbar');
-var lerpObject = require('./lerp-object');
+const {ACTIONS, EVENTS, KEY_BINDINGS} = require('./lib/constants');
+var Minimap = require('./lib/minimap');
+var Renderer = require('./lib/renderer');
+var Statusbar = require('./lib/statusbar');
+var lerpObject = require('./lib/lerp-object');
 
 var renderer = new Renderer();
 var minimap = new Minimap();

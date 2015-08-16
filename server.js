@@ -1,23 +1,23 @@
 var ecstatic = require('ecstatic');
-var app = require('http').createServer(ecstatic({ root: __dirname }));
+var app = require('http').createServer(ecstatic({ root: __dirname + '/public' }));
 var os = require('os');
 var randomName = require('node-random-name');
-var randomColor = require('./random-color');
+var randomColor = require('./lib/random-color');
 
 var http = require('http');
 var ecstatic = require('ecstatic');
 
 var PORT = +process.argv[2] || 4200;
-console.log(PORT);
+
 app.listen(PORT, function(){
   console.log("Server listening on: http://localhost:%s", PORT);
 });
 
 var io = require('socket.io')(app);
 
-var constants = require('./constants');
+var constants = require('./lib/constants');
 var SERVER_SETTINGS = constants.SERVER_SETTINGS;
-var Game = require('./game');
+var Game = require('./game/game');
 var game = new Game(500, 500);
 
 var lastFrameTime = Date.now();
@@ -32,16 +32,11 @@ io.on('connection', function(socket) {
   });
   socket.on('disconnect', function() {
     game.world.removeBody(me.body);
-    for(var i = 0; i < game.es.length; i++) {
-      if(game.es[i].id === me.id) {
-        game.es.splice(i, 1);
-        return;
-      }
-    }
+    me.removeFromGame();
   });
   socket.on('spawn', function() {
     if(!me.isAlive) {
-      
+
     }
   });
 });

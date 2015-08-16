@@ -1,5 +1,5 @@
 var p2 = require('p2');
-var constants = require('./constants');
+var constants = require('./../lib/constants');
 var uuid = require('uuid').v4;
 var GAME_SETTINGS = constants.GAME_SETTINGS;
 var ENTITY_TYPES = constants.ENTITY_TYPES;
@@ -30,6 +30,7 @@ function Bullet(game, aPlayer) {
   color = aPlayer.color;
   body.__game = this;
 
+  this.game = game;
   this.body = body;
   this.shape = shape;
   this.type = type;
@@ -54,6 +55,16 @@ proto.serialize = function() {
     width: this.shape.width,
     height: this.shape.height,
     color: this.color
+  }
+};
+
+proto.removeFromGame = function() {
+  this.game.world.removeBody(this.body);
+  for(var i = 0; i < this.game.es.length; i++) {
+    if(this.game.es[i].id === this.id) {
+      this.game.es.splice(i, 1);
+      return;
+    }
   }
 };
 

@@ -1,5 +1,5 @@
 var uuid = require('uuid').v4;
-var ENTITY_TYPES = require('./constants').ENTITY_TYPES;
+var ENTITY_TYPES = require('./../lib/constants').ENTITY_TYPES;
 var PLAYER = ENTITY_TYPES.PLAYER;
 var p2 = require('p2');
 
@@ -65,10 +65,18 @@ proto.serialize = function() {
   }
 };
 
-proto.removeFromWorld = function() {
-  this.game.world.removeBody(me.body);
-  for(var i = 0; i < game.es.length; i++) {
-    if(this.game.es[i].id === me.id) {
+proto.removeSpring = function() {
+  if(this.spring) {
+    this.spring.removeFromGame();
+    this.spring = false;
+  }
+};
+
+proto.removeFromGame = function() {
+  this.removeSpring();
+  this.game.world.removeBody(this.body);
+  for(var i = 0; i < this.game.es.length; i++) {
+    if(this.game.es[i].id === this.id) {
       this.game.es.splice(i, 1);
       return;
     }

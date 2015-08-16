@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "beefy index.js:bundle.js --live"
+    "start": "beefy index.js:bundle.js --live",
+    "build": "browserify index.js > public/bundle.js"
   },
   "browserify": {
     "transform": [

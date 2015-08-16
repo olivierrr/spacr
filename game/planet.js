@@ -1,5 +1,5 @@
 var p2 = require('p2');
-var constants = require('./constants');
+var constants = require('./../lib/constants');
 var uuid = require('uuid').v4;
 var PLANET = constants.ENTITY_TYPES.PLANET;
 
