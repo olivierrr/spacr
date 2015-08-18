@@ -128,7 +128,9 @@ proto.step = function(dt) {
     var down = e.actions || {};
 
     if(down[ACTIONS.SHOOT_MAIN_BEGIN]) {
-      self.addBullet(e);
+      if(e.lastTimeShot === undefined || e.lastTimeShot <= self.world.time) {
+        self.addBullet(e);
+      }
     }
 
     if(down[ACTIONS.THRUST_FORWARD_BEGIN]) {

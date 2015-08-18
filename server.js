@@ -51,5 +51,5 @@ function tick() {
   io.sockets.sockets.forEach(function(socket) {
     worldState.focus = socket.me.id;
     socket.emit('step', worldState);
-  })
+  });
 }

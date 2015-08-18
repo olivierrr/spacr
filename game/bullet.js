@@ -28,6 +28,7 @@ function Bullet(game, aPlayer) {
   dieTime = game.world.time + GAME_SETTINGS.BASE_PLAYER_BULLET_LIFETIME;
   ownerId = aPlayer.id;
   color = aPlayer.color;
+  aPlayer.lastTimeShot = game.world.time + GAME_SETTINGS.BASE_PLAYER_FIRERATE;
   body.__game = this;
 
   this.game = game;

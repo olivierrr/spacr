@@ -4,7 +4,7 @@ var PLAYER = ENTITY_TYPES.PLAYER;
 var p2 = require('p2');
 
 function Player(game, x, y, name, color) {
-  var shape, body, id, type, isAlive, spring, health, actions, lastShotBy, points;
+  var shape, body, id, type, isAlive, spring, health, actions, lastShotBy, points, lastTimeShot;
 
   shape = new p2.Box({
     width: 5,
@@ -28,6 +28,7 @@ function Player(game, x, y, name, color) {
   actions = {};
   lastShotBy = undefined;
   points = 0;
+  lastTimeShot = undefined;
 
   this.game = game;
   this.body = body;
@@ -42,6 +43,7 @@ function Player(game, x, y, name, color) {
   this.points = points;
   this.color = color;
   this.name = name;
+  this.lastTimeShot = lastTimeShot;
 
   game.world.addBody(body);
   game.es.push(this);
